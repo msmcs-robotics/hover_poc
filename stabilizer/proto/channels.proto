@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_package = "net.lberrymage.msmcsrobot.proto";
+option java_multiple_files = true;
+
+// These values will always be between -255 and 255 to correspond to Arduino's
+// analogWrite(). The negative values are for rotating the motor backwards.
+message MotorSpeed {
+  // This field is declared optional so the overall message always takes space
+  // on the wire. If it was not optional and both fields were set to 0, the
+  // serialized packet would take up 0 bytes on the wire. The Arduino UDP
+  // library does not notify us when we receive a zero-length UDP packet, so we
+  // must keep the serialized message >= 1 byte in length so we can detect it
+  // even when both fields are set to 0.
+  sint32 up_down = 1;
+  sint32 left_right = 2;
+  sint32 front_back = 3;
+}
