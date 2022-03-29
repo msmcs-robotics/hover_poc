@@ -2,7 +2,7 @@
 
 
 This implementation of the Nick Rehm's VTOL software, dRehmFlight, is modified to utilize 
-I2C communication from an autonomous micro controller rather than an RF reciever.
+Serial communication from an autonomous micro controller rather than an RF reciever.
 
 
 */
@@ -38,7 +38,6 @@ I2C communication from an autonomous micro controller rather than an RF reciever
 #include <Wire.h>
 #include <SPI.h>
 #include <PWMServo.h>
-#include <pb_decode.h>
 
 #if defined USE_SBUS_RX
   #include "src/SBUS/SBUS.h"   //sBus interface
@@ -110,11 +109,9 @@ I2C communication from an autonomous micro controller rather than an RF reciever
 //                                               USER-SPECIFIED VARIABLES                                                 //                           
 //========================================================================================================================//
 
-// I2C Communication
+// Serial Communication
 
 const auto BAUD_RATE = 115200;
-const auto I2C_ADDRESS = 8;
-
 
 //Radio failsafe values for every channel in the event that bad reciever data is detected. Recommended defaults:
 unsigned long channel_1_fs = 1000; //thro
@@ -254,24 +251,14 @@ float s1_command_scaled, s2_command_scaled, s3_command_scaled, s4_command_scaled
 int s1_command_PWM, s2_command_PWM, s3_command_PWM, s4_command_PWM, s5_command_PWM, s6_command_PWM, s7_command_PWM;
 
 //========================================================================================================================//
-//                                                 I2C Setup                                                              //                                                                 
+//                                                 Serial Setup                                                           //                                                                 
 //========================================================================================================================//
 
-void handle_packet(int packet_len) {
-    unsigned char packet_data[packet_len];
-
-    for (auto i = 0; i < packet_len; i++) {
-        packet_data[i] = Wire.read();
-    }
-
-    MotorSpeed speed = MotorSpeed_init_zero;
-    auto stream = pb_istream_from_buffer(packet_data, packet_len);
-    if (!pb_decode(&stream, &MotorSpeed_msg, &speed)) {
-        Serial.print("Warning: Message decoding failed: ");
-        Serial.println(PB_GET_ERROR(&stream));
-    } else {
-        drive(speed.left, speed.right);
-    }
+void handle_serial(String data){
+    int index = data.indexOf(',');
+    String pf_b = data.substring(index);
+    String pr_l = data.substring(index + 1);
+    String pu_d = data.substring(index + 2);
 }
 
 //========================================================================================================================//
@@ -369,7 +356,6 @@ unsigned long getRadioPWM(int ch_num) {
   
   return returnPWM;
 }
-
 
 void getPPM() {
   unsigned long dt_ppm;
@@ -1580,16 +1566,12 @@ void IMUinit() {
   #endif
 }
 
-//=========================================================================================//
-
 //========================================================================================================================//
 //                                                      VOID SETUP                                                        //                           
 //========================================================================================================================//
 
 void setup() {
   Serial.begin(BAUD_RATE);
-  Wire.begin(I2C_ADDRESS);
-  Wire.onReceive(handle_packet);
 
   delay(3000); //3 second delay for plugging in battery before IMU calibration begins, feel free to comment this out to reduce boot time
   
@@ -1722,10 +1704,20 @@ void loop() {
   servo7.write(s7_command_PWM);
     
   //Get vehicle commands for next loop iteration
-  getCommands(); //pulls current available radio commands
+  
+
+
+  //getCommands(); //pulls current available radio commands
+  if (Serial.available() > 0) {
+    String data = Serial.readStringUntil('\n');
+    handle_serial(data);
+  }
+  
+  
   failSafe(); //prevent failures in event of bad receiver connection, defaults to failsafe values assigned in setup
 
   //Regulate loop rate
   loopRate(2000); //do not exceed 2000Hz, all filter parameters tuned to 2000Hz by default
 }
+
 

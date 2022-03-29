@@ -5,7 +5,6 @@ I2C Pins
 
 GPIO2 -> SDA
 GPIO3 -> SCL
-
 '''
 
 from curses import baudrate
@@ -20,7 +19,7 @@ import time
 
 # Serial Variables
 serial_device = "/dev/ttyACM0"
-baudrate = 9600
+baudrate = 115200
 timeout=1
 
 # Object Detection
@@ -141,7 +140,7 @@ def make_red_dots():
 #                                    Serial Communication
 #############################################################################################
 
-def main():
+def send_serial():
     while True:
         x_dots,y_dots = make_red_dots()
         px,py = priority_coordinates(x_dots,y_dots)
@@ -150,15 +149,17 @@ def main():
         print(data)
         if cv2.waitKey(0) & 0xFF == ord('q'):
             break
-    '''    
-    with serial.Serial(serial_device, baudrate, timeout=timeout) as arduino:
+    '''
+    ser = serial.Serial(serial_device, baudrate, timeout=timeout)
+    with ser as arduino:
+        arduino.reset_input_buffer()
         try:
             while True:
                 x_dots,y_dots = make_red_dots()
                 px,py = priority_coordinates(x_dots,y_dots)
-                pf_b,pr_l,pu_d = coordinates_2_power(px,py)
-                data = str("{0:.2f}".format(pf_b)) + "," + str("{0:.2f}".format(pr_l)) + "," + str("{0:.2f}".format(pu_d))
-                arduino.write(data.encode())
+                pf_b, pr_l, pu_d = coordinates_2_power(px,py)
+                data = "{},{},{}".format(pf_b, pr_l, pu_d)
+                arduino.write(data.encode('utf-8'))
                 if cv2.waitKey(0) & 0xFF == ord('q'):
                     break
         except KeyboardInterrupt:
@@ -167,4 +168,5 @@ def main():
     cap.release()
     cv2.destroyAllWindows()
 
-main()
+send_serial()
+
