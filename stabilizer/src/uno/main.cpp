@@ -1,9 +1,10 @@
 /*
 
 
-This implementation of the Nick Rehm's VTOL software, dRehmFlight, is modified to utilize 
-Serial communication from an autonomous micro controller rather than an RF reciever.
+This implementation of the Nick Rehm's VTOL software, dRehmFlight, is modified to add 
+functionality to utilize serial communication with another microcontroller instead of an rf reciever. 
 
+These modifications make it possible for the VTOL to be controlled autonomously.
 
 */
 
@@ -111,7 +112,16 @@ Serial communication from an autonomous micro controller rather than an RF recie
 
 // Serial Communication
 
-const auto BAUD_RATE = 115200;
+const auto BAUD_RATE = 9600;
+
+int ind1;
+int ind2;
+int ind3;
+int pr_l;
+int pu_d;
+int pf_b;
+String h;
+String v;
 
 //Radio failsafe values for every channel in the event that bad reciever data is detected. Recommended defaults:
 unsigned long channel_1_fs = 1000; //thro
@@ -249,17 +259,6 @@ float m1_command_scaled, m2_command_scaled, m3_command_scaled, m4_command_scaled
 int m1_command_PWM, m2_command_PWM, m3_command_PWM, m4_command_PWM, m5_command_PWM, m6_command_PWM;
 float s1_command_scaled, s2_command_scaled, s3_command_scaled, s4_command_scaled, s5_command_scaled, s6_command_scaled, s7_command_scaled;
 int s1_command_PWM, s2_command_PWM, s3_command_PWM, s4_command_PWM, s5_command_PWM, s6_command_PWM, s7_command_PWM;
-
-//========================================================================================================================//
-//                                                 Serial Setup                                                           //                                                                 
-//========================================================================================================================//
-
-void handle_serial(String data){
-    int index = data.indexOf(',');
-    String pf_b = data.substring(index);
-    String pr_l = data.substring(index + 1);
-    String pu_d = data.substring(index + 2);
-}
 
 //========================================================================================================================//
 //                                                 Radio Setup                                                            //                                                                 
@@ -1656,9 +1655,25 @@ void setup() {
                                                   
 void loop() {
   
-  prev_time = current_time;      
-  current_time = micros();      
+  prev_time = current_time;
+  current_time = micros();
   dt = (current_time - prev_time)/1000000.0;
+
+  // pull current available serial commands
+  // information sent in the following example form:
+  // 12,34,56
+  
+  while (Serial.available() == 0){}
+  String cmd = Serial.readString(); 
+  ind1 = cmd.indexOf(',');
+  pr_l = cmd.substring(0, ind1).toInt();
+  ind2 = cmd.indexOf(',', ind1+1 );
+  h = cmd.substring(ind1+1, ind2+1);
+  pu_d = h.substring(0, h.length() - 1).toInt();
+  ind3 = cmd.indexOf(',', ind2+1 );
+  v = cmd.substring(ind2+1, ind3+1);
+  pf_b = v.substring(0, v.length() - 1).toInt();
+
 
   loopBlink(); //indicate we are in main loop with short blink every 1.5 seconds
 
@@ -1704,15 +1719,8 @@ void loop() {
   servo7.write(s7_command_PWM);
     
   //Get vehicle commands for next loop iteration
-  
-
 
   //getCommands(); //pulls current available radio commands
-  if (Serial.available() > 0) {
-    String data = Serial.readStringUntil('\n');
-    handle_serial(data);
-  }
-  
   
   failSafe(); //prevent failures in event of bad receiver connection, defaults to failsafe values assigned in setup
 

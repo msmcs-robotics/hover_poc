@@ -18,8 +18,8 @@ import serial
 import time
 
 # Serial Variables
-serial_device = "/dev/ttyACM0"
-baudrate = 115200
+serial_device = "/dev/ttyUSB0"
+baudrate = 9600
 timeout=1
 
 # Object Detection
@@ -150,7 +150,7 @@ def send_serial():
         if cv2.waitKey(0) & 0xFF == ord('q'):
             break
     '''
-    ser = serial.Serial(serial_device, baudrate, timeout=timeout)
+    ser = serial.Serial(port=serial_device, baudrate=baudrate, timeout=timeout)
     with ser as arduino:
         arduino.reset_input_buffer()
         try:
@@ -159,11 +159,12 @@ def send_serial():
                 px,py = priority_coordinates(x_dots,y_dots)
                 pf_b, pr_l, pu_d = coordinates_2_power(px,py)
                 data = "{},{},{}".format(pf_b, pr_l, pu_d)
-                arduino.write(data.encode('utf-8'))
+                arduino.write(bytes(message, 'ascii'))
                 if cv2.waitKey(0) & 0xFF == ord('q'):
                     break
         except KeyboardInterrupt:
             print("KeyboardInterrupt has been caught.")
+            arduino.close()
     '''
     cap.release()
     cv2.destroyAllWindows()
